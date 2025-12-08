@@ -60,15 +60,27 @@ export async function POST(request: Request) {
     
     if (insertError) throw insertError
 
-    // Get user_type name
-    const { data: userType } = await supabase.from('user_types').select('name').eq('id', adminTypeId).limit(1).single()
+    // Get user_type name with permissions
+    const { data: userType } = await supabase
+      .from('user_types')
+      .select('name, permission_level, can_create, can_edit, can_delete, can_view')
+      .eq('id', adminTypeId)
+      .limit(1)
+      .single()
 
-    // Create JWT token
+    // Create JWT token with permissions
     const token = jwt.sign(
       { 
         userId: userRow.id, 
         email: userRow.email,
-        userType: userType?.name || 'admin'
+        userType: userType?.name || 'admin',
+        permissions: {
+          permission_level: userType?.permission_level || 100,
+          can_create: userType?.can_create || true,
+          can_edit: userType?.can_edit || true,
+          can_delete: userType?.can_delete || true,
+          can_view: userType?.can_view || true
+        }
       },
       JWT_SECRET,
       { expiresIn: '7d' }
@@ -77,7 +89,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ 
       user: userRow, 
       token,
-      user_type: userType?.name || 'admin'
+      user_type: userType?.name || 'admin',
+      permissions: {
+        permission_level: userType?.permission_level || 100,
+        can_create: userType?.can_create || true,
+        can_edit: userType?.can_edit || true,
+        can_delete: userType?.can_delete || true,
+        can_view: userType?.can_view || true
+      }
     })
   } catch (err: any) {
     console.error('register error', err)

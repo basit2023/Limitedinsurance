@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import bcrypt from 'bcryptjs'
 
 function getSupabaseClient() {
   const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -17,7 +18,27 @@ function getSupabaseClient() {
 export async function GET() {
   const supabase = getSupabaseClient()
   try {
-    const { data, error } = await supabase.from('users').select('id,email,full_name,permissions,is_active,created_at').order('created_at', { ascending: false }).limit(100)
+    const { data, error } = await supabase
+      .from('users')
+      .select(`
+        id,
+        email,
+        full_name,
+        status,
+        created_at,
+        user_type_id,
+        user_types(
+          name,
+          permission_level,
+          can_create,
+          can_edit,
+          can_delete,
+          can_view
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(100)
+    
     if (error) throw error
     return NextResponse.json({ users: data })
   } catch (err: any) {
@@ -30,16 +51,42 @@ export async function POST(request: Request) {
   try {
     const supabase = getSupabaseClient()
     const body = await request.json()
-    const { email, full_name, user_type_name, permissions } = body
+    const { email, full_name, user_type_id, password } = body
 
-    // find user_type id
-    let user_type_id = null
-    if (user_type_name) {
-      const { data: types } = await supabase.from('user_types').select('id').eq('name', user_type_name).limit(1)
-      if (types && types.length) user_type_id = types[0].id
+    if (!email || !password) {
+      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 })
     }
 
-    const { data, error } = await supabase.from('users').insert([{ email, full_name, user_type_id, permissions }]).select().single()
+    // Hash password
+    const password_hash = await bcrypt.hash(password, 10)
+
+    const { data, error } = await supabase
+      .from('users')
+      .insert([{ 
+        email, 
+        full_name, 
+        user_type_id,
+        password_hash,
+        status: true 
+      }])
+      .select(`
+        id,
+        email,
+        full_name,
+        status,
+        created_at,
+        user_type_id,
+        user_types(
+          name,
+          permission_level,
+          can_create,
+          can_edit,
+          can_delete,
+          can_view
+        )
+      `)
+      .single()
+    
     if (error) throw error
     return NextResponse.json({ user: data })
   } catch (err: any) {
@@ -52,21 +99,48 @@ export async function PUT(request: Request) {
   try {
     const supabase = getSupabaseClient()
     const body = await request.json()
-    const { id, email, full_name, user_type_name, permissions, is_active } = body
+    const { id, email, full_name, user_type_id, status, password } = body
 
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 
-    let user_type_id = null
-    if (user_type_name) {
-      const { data: types } = await supabase.from('user_types').select('id').eq('name', user_type_name).limit(1)
-      if (types && types.length) user_type_id = types[0].id
+    const updates: Record<string, unknown> = { 
+      email, 
+      full_name, 
+      status, 
+      user_type_id, 
+      updated_at: new Date().toISOString() 
     }
 
-    const updates: any = { email, full_name, permissions, is_active, user_type_id, updated_at: new Date().toISOString() }
-    // remove undefined
+    // Hash new password if provided
+    if (password) {
+      updates.password_hash = await bcrypt.hash(password, 10)
+    }
+
+    // Remove undefined
     Object.keys(updates).forEach(k => updates[k] === undefined && delete updates[k])
 
-    const { data, error } = await supabase.from('users').update(updates).eq('id', id).select().single()
+    const { data, error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', id)
+      .select(`
+        id,
+        email,
+        full_name,
+        status,
+        created_at,
+        user_type_id,
+        user_types(
+          name,
+          permission_level,
+          can_create,
+          can_edit,
+          can_delete,
+          can_view
+        )
+      `)
+      .single()
+    
     if (error) throw error
     return NextResponse.json({ user: data })
   } catch (err: any) {

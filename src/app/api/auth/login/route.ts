@@ -44,20 +44,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 })
     }
 
-    // Get user_type name
+    // Get user_type with permissions
     const { data: userType } = await supabase
       .from('user_types')
-      .select('name')
+      .select('name, permission_level, can_create, can_edit, can_delete, can_view')
       .eq('id', userRow.user_type_id)
       .limit(1)
       .single()
 
-    // Create JWT token
+    // Create JWT token with permissions
     const token = jwt.sign(
       { 
         userId: userRow.id, 
         email: userRow.email,
-        userType: userType?.name || 'user'
+        userType: userType?.name || 'user',
+        permissions: {
+          permission_level: userType?.permission_level || 0,
+          can_create: userType?.can_create || false,
+          can_edit: userType?.can_edit || false,
+          can_delete: userType?.can_delete || false,
+          can_view: userType?.can_view || true
+        }
       },
       JWT_SECRET,
       { expiresIn: '7d' }
@@ -69,7 +76,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ 
       user: safeUser, 
       token,
-      user_type: userType?.name || 'user'
+      user_type: userType?.name || 'user',
+      permissions: {
+        permission_level: userType?.permission_level || 0,
+        can_create: userType?.can_create || false,
+        can_edit: userType?.can_edit || false,
+        can_delete: userType?.can_delete || false,
+        can_view: userType?.can_view || true
+      }
     })
   } catch (err: any) {
     console.error('login error', err)
