@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
-import { Plus, Save, AlertCircle, CheckCircle } from 'lucide-react'
+import { Save, AlertCircle } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 
 interface Center {
@@ -46,14 +46,19 @@ function DataEntryForm() {
   const fetchCenters = async () => {
     try {
       const response = await fetch('/api/admin/centers')
+      if (!response.ok) {
+        throw new Error('Failed to fetch centers')
+      }
       const data = await response.json()
       setCenters(data.centers || [])
       if (data.centers && data.centers.length > 0) {
         setFormData(prev => ({ ...prev, centerId: data.centers[0].id }))
+      } else {
+        toast.error('No centers found. Please add centers first.', { duration: 5000 })
       }
     } catch (error) {
       console.error('Error fetching centers:', error)
-      toast.error('Failed to load centers')
+      toast.error('Failed to load centers. Check your database connection.')
     }
   }
 
@@ -109,6 +114,30 @@ function DataEntryForm() {
         <h1 className="text-2xl font-bold text-gray-900">Sales Data Entry</h1>
         <p className="text-gray-600">Enter daily sales and submission data</p>
       </div>
+
+      {/* No Centers Help Banner */}
+      {centers.length === 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-yellow-900">No Centers Available</h3>
+              <p className="text-sm text-yellow-700 mt-1">
+                You need to add centers before entering data. Run this SQL in your Supabase SQL Editor:
+              </p>
+              <div className="mt-3 bg-yellow-100 rounded p-3 text-xs font-mono text-yellow-900 overflow-x-auto">
+                <pre className="whitespace-pre-wrap">{`INSERT INTO centers (center_name, location, region, daily_sales_target) VALUES
+  ('Dallas BPO Center', 'Dallas, TX', 'South', 50),
+  ('Phoenix BPO Center', 'Phoenix, AZ', 'West', 45),
+  ('Atlanta BPO Center', 'Atlanta, GA', 'Southeast', 55);`}</pre>
+              </div>
+              <p className="text-xs text-yellow-600 mt-2">
+                After adding centers, refresh this page.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
         <form onSubmit={handleSubmit} className="space-y-6">

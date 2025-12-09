@@ -89,10 +89,33 @@ function DashboardContent() {
     }
   }
 
-  const filteredCenters = data?.centerPerformances.filter(center =>
+  // Default empty data structure
+  const defaultData: DashboardData = {
+    date: selectedDate,
+    overallMetrics: {
+      totalSalesVolume: 0,
+      totalUnderwritingVolume: 0,
+      totalTransfers: 0,
+      approvalRate: 0,
+      dqPercentage: 0,
+      callbackRate: 0
+    },
+    centerPerformances: [],
+    hourlyData: Array.from({ length: 24 }, (_, i) => ({ hour: i, sales: 0, transfers: 0 })),
+    summary: {
+      totalCenters: 0,
+      centersOnTarget: 0,
+      centersAtRisk: 0,
+      avgDQ: 0
+    }
+  }
+
+  const displayData = data || defaultData
+
+  const filteredCenters = displayData.centerPerformances.filter(center =>
     center.centerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     center.region.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || []
+  )
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -140,12 +163,23 @@ function DashboardContent() {
     )
   }
 
-  if (!data) {
-    return <div className="p-8">No data available</div>
-  }
-
   return (
     <div className="space-y-6">
+      {/* No Data Info Banner */}
+      {displayData.centerPerformances.length === 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-blue-900">No data available yet</h3>
+              <p className="text-sm text-blue-700 mt-1">
+                To get started: (1) Add centers via SQL or Admin API, (2) Enter sales data at <a href="/dashboard/data-entry" className="underline font-medium">Data Entry</a>, (3) Refresh this page
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -176,7 +210,7 @@ function DashboardContent() {
             <h3 className="text-sm font-medium text-gray-600">Total Sales</h3>
             <CheckCircle className="w-5 h-5 text-green-600" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">{data.overallMetrics.totalSalesVolume}</p>
+          <p className="text-3xl font-bold text-gray-900">{displayData.overallMetrics.totalSalesVolume}</p>
           <p className="text-xs text-gray-500 mt-1">Pending Approval</p>
         </div>
 
@@ -185,7 +219,7 @@ function DashboardContent() {
             <h3 className="text-sm font-medium text-gray-600">Underwriting</h3>
             <Clock className="w-5 h-5 text-blue-600" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">{data.overallMetrics.totalUnderwritingVolume}</p>
+          <p className="text-3xl font-bold text-gray-900">{displayData.overallMetrics.totalUnderwritingVolume}</p>
           <p className="text-xs text-gray-500 mt-1">In UW Process</p>
         </div>
 
@@ -194,7 +228,7 @@ function DashboardContent() {
             <h3 className="text-sm font-medium text-gray-600">Approval Rate</h3>
             <TrendingUp className="w-5 h-5 text-purple-600" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">{Math.round(data.overallMetrics.approvalRate)}%</p>
+          <p className="text-3xl font-bold text-gray-900">{Math.round(displayData.overallMetrics.approvalRate)}%</p>
           <p className="text-xs text-gray-500 mt-1">Overall Performance</p>
         </div>
 
@@ -203,7 +237,7 @@ function DashboardContent() {
             <h3 className="text-sm font-medium text-gray-600">DQ Rate</h3>
             <AlertCircle className="w-5 h-5 text-orange-600" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">{Math.round(data.overallMetrics.dqPercentage)}%</p>
+          <p className="text-3xl font-bold text-gray-900">{Math.round(displayData.overallMetrics.dqPercentage)}%</p>
           <p className="text-xs text-gray-500 mt-1">Quality Issues</p>
         </div>
       </div>
@@ -215,7 +249,7 @@ function DashboardContent() {
             <CheckCircle className="w-6 h-6" />
             <h3 className="text-lg font-semibold">On Target</h3>
           </div>
-          <p className="text-4xl font-bold">{data.summary.centersOnTarget}</p>
+          <p className="text-4xl font-bold">{displayData.summary.centersOnTarget}</p>
           <p className="text-green-100 text-sm mt-1">Centers performing well</p>
         </div>
 
@@ -224,7 +258,7 @@ function DashboardContent() {
             <AlertCircle className="w-6 h-6" />
             <h3 className="text-lg font-semibold">At Risk</h3>
           </div>
-          <p className="text-4xl font-bold">{data.summary.centersAtRisk}</p>
+          <p className="text-4xl font-bold">{displayData.summary.centersAtRisk}</p>
           <p className="text-red-100 text-sm mt-1">Centers need attention</p>
         </div>
 
@@ -233,7 +267,7 @@ function DashboardContent() {
             <Users className="w-6 h-6" />
             <h3 className="text-lg font-semibold">Total Centers</h3>
           </div>
-          <p className="text-4xl font-bold">{data.summary.totalCenters}</p>
+          <p className="text-4xl font-bold">{displayData.summary.totalCenters}</p>
           <p className="text-blue-100 text-sm mt-1">Active BPO centers</p>
         </div>
       </div>
@@ -344,13 +378,13 @@ function DashboardContent() {
       <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-6">Hourly Performance</h2>
         <div className="flex items-end gap-2 h-64">
-          {data.hourlyData.map((hour) => (
+          {displayData.hourlyData.map((hour) => (
             <div key={hour.hour} className="flex-1 flex flex-col items-center">
               <div className="w-full flex flex-col gap-1 items-center">
                 <div 
                   className="w-full bg-blue-500 rounded-t hover:bg-blue-600 transition-colors cursor-pointer"
                   style={{ 
-                    height: `${Math.max((hour.sales / Math.max(...data.hourlyData.map(h => h.sales))) * 200, 4)}px`,
+                    height: `${Math.max((hour.sales / Math.max(...displayData.hourlyData.map(h => h.sales), 1)) * 200, 4)}px`,
                     minHeight: '4px'
                   }}
                   title={`Sales: ${hour.sales}`}
