@@ -1,85 +1,275 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Insurance Sales Alert Portal Dashboard
 
-## Getting Started
+A comprehensive real-time performance monitoring and alert system for insurance BPO centers. Built with Next.js, TypeScript, Supabase, and React.
 
-First, run the development server:
+## 🎯 Overview
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+The Insurance Sales Alert Portal enables proactive performance management through real-time alerts, automated reporting, and data-driven insights across multiple BPO centers. The system tracks sales volume, quality metrics, approval rates, and triggers intelligent notifications via Slack, email, and push notifications.
+
+## ✨ Key Features
+
+- **Real-Time Dashboard** - Monitor BPO performance with live metrics and visual indicators
+- **Multi-Center Monitoring** - Track and compare performance across all centers
+- **Automated Alerts** - Smart threshold-based alerts for low sales, zero sales, high DQ rates, etc.
+- **Quality Tracking** - Monitor DQ percentages, corrective actions, and compliance
+- **Automated Reporting** - Daily, weekly, and monthly performance reports
+- **Multi-Channel Notifications** - Slack, Email, and Push notifications
+- **Data Entry System** - Easy-to-use interface for submitting sales data
+- **Center Rankings** - Performance-based BPO rankings and comparisons
+- **User Management** - Role-based access control with permissions
+- **Admin Configuration** - Manage centers, alert rules, and notification preferences
+
+## 🏗️ Tech Stack
+
+- **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS
+- **Backend:** Next.js API Routes, Node.js
+- **Database:** Supabase (PostgreSQL)
+- **Authentication:** JWT with bcryptjs
+- **Notifications:** Slack Webhooks, Nodemailer, Firebase (Push)
+- **Scheduling:** node-cron
+- **UI Components:** Lucide React, React Hot Toast
+- **Charts:** Custom visualizations with Recharts-ready structure
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Node.js 18+ and npm
+- Supabase account and project
+- (Optional) Slack workspace for notifications
+- (Optional) SMTP server for email notifications
+
+### Installation
+
+1. **Clone and install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Set up database:**
+   - Create a Supabase project at https://app.supabase.com
+   - Run `supabase/complete_schema.sql` in SQL Editor
+   - Add sample data (see SETUP_GUIDE.md)
+
+3. **Configure environment:**
+   ```bash
+   copy .env.example .env.local
+   ```
+   Update `.env.local` with your Supabase credentials and notification settings.
+
+4. **Run development server:**
+   ```bash
+   npm run dev
+   ```
+   Access at http://localhost:3000
+
+5. **Run scheduler (optional):**
+   ```bash
+   npx tsx scheduler.ts
+   ```
+
+### Initial Setup
+
+1. **Register a user** at `/register`
+2. **Add centers** via SQL or Admin API
+3. **Create alert rules** for your thresholds
+4. **Enter sales data** at `/dashboard/data-entry`
+5. **View dashboard** at `/dashboard`
+
+## 📊 Core Metrics
+
+The system tracks and calculates:
+
+- **Total Sales Volume** - Entries with status "Pending Approval" and call result "Submitted"
+- **Underwriting Volume** - Entries with status "Pending Approval" and call result "Underwriting"
+- **Transfer Count** - Total entries for the day
+- **Approval Rate** - (Pending Approval entries / Total entries) × 100
+- **DQ Percentage** - (DQ status entries / Total transfers) × 100
+- **Callback Rate** - Percentage of callback requests
+- **Approval Ratio** - Transfer vs Submission ratio per center
+
+## 🔔 Alert Types
+
+### Automated Triggers:
+
+1. **Low Sales Volume** - Sales below target threshold
+2. **Zero Sales Alert (CRITICAL)** - No sales by specified time
+3. **High DQ Rate** - Quality issues exceed acceptable percentage
+4. **Low Approval Ratio** - Too many cases going to underwriting
+5. **Milestone Achievement** - Positive alerts for reaching targets
+6. **Below Threshold Duration** - Consecutive hours below target
+
+### Scheduled Reports:
+
+- **Daily Morning Brief** (8:00 AM) - Yesterday's summary, today's targets
+- **Mid-Day Check-in** (1:00 PM) - Progress update, at-risk centers
+- **End-of-Day Summary** (5:00 PM) - Final performance, quality summary
+- **Weekly Report** (Friday 5:00 PM) - Trends, top/bottom performers
+- **Monthly Report** (Last day) - Full analysis, rankings, insights
+
+## 🎨 Dashboard Features
+
+### Main Dashboard (`/dashboard`)
+- Real-time KPI cards (Sales, Underwriting, Approval Rate, DQ Rate)
+- Center performance table with status indicators
+- Search and filter functionality
+- Hourly sales charts
+- Trend indicators (↑↓ vs. yesterday)
+- Color-coded status (Green/Yellow/Red)
+
+### Data Entry (`/dashboard/data-entry`)
+- Form to submit daily sales data
+- Select center, agent, customer details
+- Status and call result dropdowns
+- Premium and face amount inputs
+- Real-time validation
+
+### User Management (`/dashboard/users`)
+- Create/edit users with permissions
+- Role-based access control
+- Permission level management (can_create, can_edit, can_delete)
+- Search and filter users
+
+## 🔧 API Endpoints
+
+### Dashboard APIs
+- `GET /api/dashboard/overview?date=YYYY-MM-DD` - Main dashboard data
+- `GET /api/dashboard/center/[id]?range=7|14|30` - Center details
+- `GET /api/dashboard/rankings?metric=sales|dq|approval|overall` - BPO rankings
+
+### Alert APIs
+- `GET /api/alerts?days=7&status=all` - Alert history
+- `POST /api/alerts` - Create manual alert
+- `PATCH /api/alerts/[id]` - Acknowledge alert
+
+### Quality APIs
+- `GET /api/quality/dq-summary?days=7` - DQ tracking
+- `GET /api/quality/corrective-actions` - Corrective actions
+- `POST /api/quality/corrective-actions` - Create action
+
+### Admin APIs
+- `GET /api/admin/centers` - List all centers
+- `POST /api/admin/centers` - Create center
+- `GET /api/admin/alert-rules` - List alert rules
+- `POST /api/admin/alert-rules` - Create rule
+
+### Data Entry API
+- `POST /api/data-entry` - Submit sales entry
+- `GET /api/data-entry?date=YYYY-MM-DD` - Get entries
+
+## 🔐 Authentication & Permissions
+
+The system uses JWT-based authentication with role-based access control:
+
+- **Permission Levels** - Numeric levels (1-100) for granular control
+- **Action Permissions** - can_create, can_edit, can_delete, can_view
+- **Protected Routes** - ProtectedRoute component wraps all dashboard pages
+- **Session Storage** - Permissions cached in session for performance
+
+Minimum permission level required:
+- Dashboard access: Level 15
+- User management: Level 20 (recommended)
+- Admin functions: Level 50 (recommended)
+
+## 📧 Notification Setup
+
+### Slack
+1. Create Slack App at https://api.slack.com/apps
+2. Enable Incoming Webhooks
+3. Create webhooks for channels
+4. Add URLs to `.env.local`
+
+### Email (Gmail)
+1. Enable 2FA in Google Account
+2. Generate App Password
+3. Configure SMTP settings in `.env.local`
+
+### Push Notifications
+1. Set up Firebase project
+2. Configure FCM for Android, APNs for iOS
+3. Add Firebase server key to `.env.local`
+
+## 📈 Metrics Calculation Logic
+
+```typescript
+// Sales Volume
+status = 'Pending Approval' AND call_result = 'Submitted'
+
+// UW Volume
+status = 'Pending Approval' AND call_result = 'Underwriting'
+
+// Approval Rate
+(Total Pending Approval / Total Entries) × 100
+
+// DQ Percentage
+(DQ Status Count / Total Transfers) × 100
+
+// Target Achievement
+(Actual Sales / Daily Target) × 100
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🎯 Color Status Indicators
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Green** - On target (≥80% achievement)
+- **Yellow** - Moderate (50-79% achievement)
+- **Red** - Needs attention (<50% achievement)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🐛 Troubleshooting
 
-## Learn More
+See SETUP_GUIDE.md for detailed troubleshooting:
+- Database connection issues
+- Alert not triggering
+- Notification delivery problems
+- Dashboard data not loading
 
-To learn more about Next.js, take a look at the following resources:
+## 📚 Documentation
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **SETUP_GUIDE.md** - Complete setup and usage guide
+- **.env.example** - Environment variables reference
+- **supabase/complete_schema.sql** - Full database schema
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🚀 Production Deployment
 
-## Deploy on Vercel
+### Vercel (Recommended)
+```bash
+vercel deploy
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Add environment variables in Vercel dashboard.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Docker
+```bash
+docker build -t insurance-portal .
+docker run -p 3000:3000 --env-file .env.local insurance-portal
+```
+
+### Scheduler Deployment
+Deploy `scheduler.ts` to:
+- Separate Node.js server
+- AWS Lambda with EventBridge
+- Vercel Cron Jobs
+- Google Cloud Functions
+
+## 🤝 Contributing
+
+This is a custom internal tool. For modifications:
+1. Review SETUP_GUIDE.md
+2. Test changes locally
+3. Update documentation
+4. Deploy to staging first
+
+## 📝 License
+
+Proprietary - Internal use only
+
+## 🆘 Support
+
+For questions or issues:
+- Review documentation files
+- Check API responses for error messages
+- Verify database schema matches `complete_schema.sql`
+- Ensure environment variables are set correctly
 
 ---
 
-**Supabase integration (users & permissions)**
-
-Quick setup to try the users dashboard locally:
-
-1. Create a Supabase project at https://app.supabase.com and get the project URL, anon key, and service role key.
-2. Run the SQL in `supabase/schema.sql` in the Supabase SQL editor to create the `users` and `user_types` tables.
-3. Add environment variables to your `.env.local` in the project root:
-
-```bash
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_URL=your_supabase_url
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-```
-
-4. Install dependencies and run dev server:
-
-```powershell
-npm install
-npm run dev
-```
-
-5. Open `http://localhost:3000` and use the Users UI to list/create/delete users.
-
-Notes:
-- The API routes under `src/app/api/users/route.ts` use the Supabase service role key, so keep `.env.local` out of version control.
-- This is a starting point: next steps include adding authentication, RBAC checks, audit logs, and central admin screens for alert rules and centers.
-
-Auth API Endpoints
-
-I added server endpoints to register/login and inspect the current user using Supabase Auth. They are:
-
-- `POST /api/auth/register`  - body: `{ email, password, full_name }`. Creates a Supabase Auth user, a `users` row and assigns default `admin` user type. Returns `{ user, token, refresh_token }` on success.
-- `POST /api/auth/login`     - body: `{ email, password }`. Signs in using Supabase and returns `{ user, token, refresh_token }`.
-- `GET /api/auth/me`         - header: `Authorization: Bearer <access_token>`. Returns `{ user, auth }`.
-
-Usage example (login):
-
-```powershell
-curl -X POST http://localhost:3000/api/auth/login -H "Content-Type: application/json" -d '{"email":"you@example.com","password":"secret"}'
-```
-
-Notes:
-- These endpoints use the Supabase **service role** key on the server. Keep `SUPABASE_SERVICE_ROLE_KEY` secret and out of VCS.
-- The returned `token` is the Supabase JWT (access token). Use it in `Authorization: Bearer <token>` for authenticated requests.
-- Next steps: protect the UI, add refresh token handling, and implement role-based guards on server routes.
+**Built with ❤️ for efficient BPO performance management**

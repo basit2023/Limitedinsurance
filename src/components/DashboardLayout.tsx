@@ -15,6 +15,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
+    { name: 'Data Entry', href: '/dashboard/data-entry', icon: PlusIcon },
     { name: 'Users', href: '/dashboard/users', icon: UsersIcon },
     { name: 'Centers', href: '/dashboard/centers', icon: BuildingIcon },
     { name: 'Alerts', href: '/dashboard/alerts', icon: BellIcon },
@@ -194,3 +195,12 @@ function SettingsIcon({ className }: { className?: string }) {
     </svg>
   )
 }
+
+function PlusIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+    </svg>
+  )
+}
+
