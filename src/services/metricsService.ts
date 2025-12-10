@@ -62,20 +62,20 @@ export interface TrendMetrics {
  */
 export async function getTotalSalesVolume(date: string, centerId?: string): Promise<number> {
   const supabase = getSupabaseClient()
-  
+
   let query = supabase
     .from('daily_deal_flow')
     .select('id', { count: 'exact', head: true })
     .eq('date', date)
     .eq('status', 'Pending Approval')
     .eq('call_result', 'Submitted')
-  
+
   if (centerId) {
     query = query.eq('center_id', centerId)
   }
-  
+
   const { count, error } = await query
-  
+
   if (error) throw error
   return count || 0
 }
@@ -86,20 +86,20 @@ export async function getTotalSalesVolume(date: string, centerId?: string): Prom
  */
 export async function getTotalUnderwritingVolume(date: string, centerId?: string): Promise<number> {
   const supabase = getSupabaseClient()
-  
+
   let query = supabase
     .from('daily_deal_flow')
     .select('id', { count: 'exact', head: true })
     .eq('date', date)
     .eq('status', 'Pending Approval')
     .eq('call_result', 'Underwriting')
-  
+
   if (centerId) {
     query = query.eq('center_id', centerId)
   }
-  
+
   const { count, error } = await query
-  
+
   if (error) throw error
   return count || 0
 }
@@ -110,18 +110,18 @@ export async function getTotalUnderwritingVolume(date: string, centerId?: string
  */
 export async function getTransferCount(date: string, centerId?: string): Promise<number> {
   const supabase = getSupabaseClient()
-  
+
   let query = supabase
     .from('daily_deal_flow')
     .select('id', { count: 'exact', head: true })
     .eq('date', date)
-  
+
   if (centerId) {
     query = query.eq('center_id', centerId)
   }
-  
+
   const { count, error } = await query
-  
+
   if (error) throw error
   return count || 0
 }
@@ -132,30 +132,30 @@ export async function getTransferCount(date: string, centerId?: string): Promise
  */
 export async function getApprovalRate(date: string, centerId?: string): Promise<{ rate: number; count: number }> {
   const supabase = getSupabaseClient()
-  
+
   const totalEntries = await getTransferCount(date, centerId)
-  
+
   if (totalEntries === 0) {
     return { rate: 0, count: 0 }
   }
-  
+
   let query = supabase
     .from('daily_deal_flow')
     .select('id', { count: 'exact', head: true })
     .eq('date', date)
     .eq('status', 'Pending Approval')
-  
+
   if (centerId) {
     query = query.eq('center_id', centerId)
   }
-  
+
   const { count, error } = await query
-  
+
   if (error) throw error
-  
+
   const pendingCount = count || 0
   const rate = (pendingCount / totalEntries) * 100
-  
+
   return { rate: Math.round(rate * 100) / 100, count: pendingCount }
 }
 
@@ -164,32 +164,32 @@ export async function getApprovalRate(date: string, centerId?: string): Promise<
  */
 export async function getDQPercentage(date: string, centerId?: string): Promise<{ percentage: number; count: number }> {
   const supabase = getSupabaseClient()
-  
+
   // Get total entries for the day
   const totalEntries = await getTransferCount(date, centerId)
-  
+
   if (totalEntries === 0) {
     return { percentage: 0, count: 0 }
   }
-  
+
   // Get DQ items for the date
   let query = supabase
     .from('dq_items')
     .select('id', { count: 'exact', head: true })
     .gte('discovered_date', date)
     .lte('discovered_date', date)
-  
+
   if (centerId) {
     query = query.eq('center_id', centerId)
   }
-  
+
   const { count, error } = await query
-  
+
   if (error) throw error
-  
+
   const dqCount = count || 0
   const percentage = (dqCount / totalEntries) * 100
-  
+
   return { percentage: Math.round(percentage * 100) / 100, count: dqCount }
 }
 
@@ -198,30 +198,30 @@ export async function getDQPercentage(date: string, centerId?: string): Promise<
  */
 export async function getCallbackRate(date: string, centerId?: string): Promise<{ rate: number; count: number }> {
   const supabase = getSupabaseClient()
-  
+
   const totalEntries = await getTransferCount(date, centerId)
-  
+
   if (totalEntries === 0) {
     return { rate: 0, count: 0 }
   }
-  
+
   let query = supabase
     .from('daily_deal_flow')
     .select('id', { count: 'exact', head: true })
     .eq('date', date)
     .or('from_callback.eq.true,is_callback.eq.true')
-  
+
   if (centerId) {
     query = query.eq('center_id', centerId)
   }
-  
+
   const { count, error } = await query
-  
+
   if (error) throw error
-  
+
   const callbackCount = count || 0
   const rate = (callbackCount / totalEntries) * 100
-  
+
   return { rate: Math.round(rate * 100) / 100, count: callbackCount }
 }
 
@@ -234,13 +234,13 @@ export async function getApprovalRatioTransferVsSubmission(
 ): Promise<{ ratio: number; submissions: number; transfers: number }> {
   const transfers = await getTransferCount(date, centerId)
   const submissions = await getTotalSalesVolume(date, centerId)
-  
+
   if (transfers === 0) {
     return { ratio: 0, submissions, transfers }
   }
-  
+
   const ratio = (submissions / transfers) * 100
-  
+
   return { ratio: Math.round(ratio * 100) / 100, submissions, transfers }
 }
 
@@ -251,7 +251,7 @@ export async function getTrendMetrics(centerId?: string, date?: string): Promise
   const today = date || new Date().toISOString().split('T')[0]
   const yesterday = new Date(new Date(today).getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   const lastWeek = new Date(new Date(today).getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-  
+
   const [
     todaySales,
     todayTransfers,
@@ -273,7 +273,7 @@ export async function getTrendMetrics(centerId?: string, date?: string): Promise
     getTransferCount(lastWeek, centerId),
     getApprovalRate(lastWeek, centerId)
   ])
-  
+
   return {
     vsYesterday: {
       sales: yesterdaySales ? ((todaySales - yesterdaySales) / yesterdaySales) * 100 : 0,
@@ -293,7 +293,7 @@ export async function getTrendMetrics(centerId?: string, date?: string): Promise
  */
 export async function getCenterDailyPerformance(
   centerId: string,
-  range: 7 | 14 | 30 = 7
+  range: number = 7
 ): Promise<Array<{
   date: string
   transfers: number
@@ -301,23 +301,33 @@ export async function getCenterDailyPerformance(
   approvals: number
   underwriting: number
   dq: number
+  dqCount: number
+  dqPercentage: number
   callbacks: number
 }>> {
   const endDate = new Date().toISOString().split('T')[0]
   const startDate = new Date(new Date(endDate).getTime() - range * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-  
+
   const supabase = getSupabaseClient()
-  
+
   const { data, error } = await supabase
     .from('daily_deal_flow')
     .select('*')
     .eq('center_id', centerId)
     .gte('date', startDate)
     .lte('date', endDate)
-  
+
   if (error) throw error
-  
+
   // Group by date
+  interface DailyStats {
+    date: string
+    transfers: number
+    sales: number
+    approvals: number
+    underwriting: number
+    callbacks: number
+  }
   const grouped = (data || []).reduce((acc, item) => {
     const date = item.date
     if (!acc[date]) {
@@ -330,28 +340,28 @@ export async function getCenterDailyPerformance(
         callbacks: 0
       }
     }
-    
+
     acc[date].transfers++
-    
+
     if (item.status === 'Pending Approval' && item.call_result === 'Submitted') {
       acc[date].sales++
     }
-    
+
     if (item.status === 'Pending Approval') {
       acc[date].approvals++
     }
-    
+
     if (item.status === 'Pending Approval' && item.call_result === 'Underwriting') {
       acc[date].underwriting++
     }
-    
+
     if (item.from_callback || item.is_callback) {
       acc[date].callbacks++
     }
-    
+
     return acc
-  }, {} as Record<string, any>)
-  
+  }, {} as Record<string, DailyStats>)
+
   // Get DQ counts
   const { data: dqData } = await supabase
     .from('dq_items')
@@ -359,17 +369,24 @@ export async function getCenterDailyPerformance(
     .eq('center_id', centerId)
     .gte('discovered_date', startDate)
     .lte('discovered_date', endDate)
-  
+
   const dqByDate = (dqData || []).reduce((acc, item) => {
     acc[item.discovered_date] = (acc[item.discovered_date] || 0) + 1
     return acc
   }, {} as Record<string, number>)
-  
+
   // Combine and return
-  return Object.values(grouped).map(day => ({
-    ...day,
-    dq: dqByDate[day.date] || 0
-  }))
+  return (Object.values(grouped) as DailyStats[]).map((day) => {
+    const dqCount = dqByDate[day.date] || 0
+    const dqPercentage = day.transfers > 0 ? (dqCount / day.transfers) * 100 : 0
+
+    return {
+      ...day,
+      dq: dqCount, // Keep for backward compatibility
+      dqCount,
+      dqPercentage
+    }
+  })
 }
 
 /**
@@ -377,40 +394,40 @@ export async function getCenterDailyPerformance(
  */
 export async function getHourlyData(date: string, centerId?: string): Promise<HourlyData[]> {
   const supabase = getSupabaseClient()
-  
+
   let query = supabase
     .from('daily_deal_flow')
     .select('created_at, status, call_result')
     .eq('date', date)
-  
+
   if (centerId) {
     query = query.eq('center_id', centerId)
   }
-  
+
   const { data, error } = await query
-  
+
   if (error) throw error
-  
+
   // Group by hour
   const hourlyMap = new Map<number, { sales: number; transfers: number }>()
-  
+
   for (let i = 0; i < 24; i++) {
     hourlyMap.set(i, { sales: 0, transfers: 0 })
   }
-  
+
   (data || []).forEach(item => {
     const hour = new Date(item.created_at).getHours()
     const hourData = hourlyMap.get(hour) || { sales: 0, transfers: 0 }
-    
+
     hourData.transfers++
-    
+
     if (item.status === 'Pending Approval' && item.call_result === 'Submitted') {
       hourData.sales++
     }
-    
+
     hourlyMap.set(hour, hourData)
   })
-  
+
   return Array.from(hourlyMap.entries()).map(([hour, data]) => ({
     hour,
     ...data
@@ -436,7 +453,7 @@ export async function getComprehensiveMetrics(date: string, centerId?: string): 
     getDQPercentage(date, centerId),
     getCallbackRate(date, centerId)
   ])
-  
+
   return {
     totalSales,
     totalUnderwriting,

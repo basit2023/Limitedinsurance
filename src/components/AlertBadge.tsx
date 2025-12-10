@@ -43,7 +43,7 @@ export default function AlertBadge({
         }
     }
 
-    const config = priorityConfig[priority]
+    const config = priorityConfig[priority] || priorityConfig['medium']
 
     return (
         <span
@@ -84,9 +84,10 @@ export function AlertTypeBadge({ type, className = '' }: AlertTypeBadgeProps) {
 
     const color = typeColors[type] || 'bg-gray-100 text-gray-800'
 
+    const safeType = type || 'Unknown'
     return (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${color} ${className}`}>
-            {type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            {safeType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
         </span>
     )
 }

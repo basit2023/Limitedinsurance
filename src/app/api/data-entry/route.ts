@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { checkSingleCenter } from '@/services/alertEngine'
 
 function getSupabaseClient() {
   const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -47,6 +48,7 @@ export async function POST(request: Request) {
     const { data: entry, error } = await supabase
       .from('daily_deal_flow')
       .insert({
+        submission_id: `SUB-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
         date,
         center_id: centerId,
         agent,
@@ -65,10 +67,13 @@ export async function POST(request: Request) {
 
     if (error) throw error
 
+    // Trigger real-time alert check (fire and forget)
+    checkSingleCenter(centerId).catch(err => console.error('Error triggering real-time alert:', err))
+
     return NextResponse.json({
       success: true,
       entry,
-      message: 'Sales entry created successfully'
+      message: 'Data submitted successfully'
     })
   } catch (err) {
     console.error('Error creating sales entry:', err)

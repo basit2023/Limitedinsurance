@@ -335,7 +335,7 @@ function AlertsContent() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex gap-1">
-                      {alert.channelsSent.map((channel, idx) => (
+                      {(alert.channelsSent || []).map((channel, idx) => (
                         <span key={idx} className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">
                           {channel}
                         </span>

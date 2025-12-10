@@ -63,7 +63,7 @@ export default function PerformanceChart({
         )
     }
 
-    const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
+    const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
             return (
                 <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">

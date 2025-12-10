@@ -1,0 +1,76 @@
+﻿
+> insurance@0.1.0 build
+> next build
+
+   Γû▓ Next.js 16.0.7 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully in 18.7s
+   Running TypeScript ...
+node.exe : Failed to 
+compile.
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo      
+        : NotSpeci    
+fied: (Failed to     
+compile.:String)     
+[], RemoteExcepti    on
+    + FullyQualifiedE   
+ rrorId : NativeCo    
+mmandError
+ 
+
+./src/components/Perform
+anceChart.tsx:66:38
+Type error: Property 
+'payload' does not 
+exist on type 
+'TooltipProps<number, 
+string>'.
+
+[0m [90m 64 |[39m    
+ }
+ [90m 65 |[39m
+[31m[1m>[22m[39m[90
+m 66 |[39m     
+[36mconst[39m 
+[33mCustomTooltip[39m 
+[33m=[39m ({ 
+active[33m,[39m 
+payload[33m,[39m 
+label }[33m:[39m [33m
+TooltipProps[39m[33m<
+[39m[33mnumber[39m[33
+m,[39m 
+string[33m>[39m) 
+[33m=>[39m {
+ [90m    |[39m        
+                        
+      
+[31m[1m^[22m[39m
+ [90m 67 |[39m        
+ [36mif[39m (active 
+[33m&&[39m payload 
+[33m&&[39m payload[33
+m.[39mlength) {
+ [90m 68 |[39m        
+     [36mreturn[39m (
+ [90m 69 |[39m        
+         [33m<[39m[33
+mdiv[39m className[33m
+=[39m[32m"bg-white 
+p-3 rounded-lg 
+shadow-lg border border-
+gray-200"[39m[33m>[39
+m[0m
+Next.js build worker 
+exited with code: 1 and 
+signal: null

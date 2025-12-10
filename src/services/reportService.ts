@@ -8,6 +8,36 @@ import {
 } from './metricsService'
 import { sendEmail } from './notificationDispatcher'
 
+// Define interfaces for reports
+interface MorningBriefReport {
+  date: string
+  yesterdayDate: string
+  summary: {
+    totalCenters: number
+    centersOnTarget: number
+    avgAchievement: number
+    totalSales: number
+  }
+  top3: Array<{
+    center: string
+    sales: number
+    target: number
+    achievement: number
+    dqPercentage: number
+    approvalRate: number
+  }>
+  bottom3: Array<{
+    center: string
+    sales: number
+    target: number
+    achievement: number
+    dqPercentage: number
+    approvalRate: number
+  }>
+  criticalIssues: Record<string, unknown>[]
+  todayTarget: number
+}
+
 function getSupabaseClient() {
   const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
   const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -24,20 +54,20 @@ function getSupabaseClient() {
 /**
  * Build Daily Morning Brief (08:00 AM)
  */
-export async function buildDailyMorningBrief(date: string = new Date().toISOString().split('T')[0]) {
+export async function buildDailyMorningBrief(date: string = new Date().toISOString().split('T')[0]): Promise<MorningBriefReport> {
   const supabase = getSupabaseClient()
-  
+
   // Get yesterday's date
   const yesterday = new Date(date)
   yesterday.setDate(yesterday.getDate() - 1)
   const yesterdayStr = yesterday.toISOString().split('T')[0]
-  
+
   // Get all active centers
   const { data: centers } = await supabase
     .from('centers')
     .select('*')
     .eq('status', true)
-  
+
   // Get yesterday's performance
   const yesterdayPerformance = await Promise.all(
     (centers || []).map(async (center) => {
@@ -46,7 +76,7 @@ export async function buildDailyMorningBrief(date: string = new Date().toISOStri
         getDQPercentage(yesterdayStr, center.id),
         getApprovalRate(yesterdayStr, center.id)
       ])
-      
+
       return {
         center: center.center_name,
         sales,
@@ -57,14 +87,14 @@ export async function buildDailyMorningBrief(date: string = new Date().toISOStri
       }
     })
   )
-  
+
   // Sort by achievement
   yesterdayPerformance.sort((a, b) => b.achievement - a.achievement)
-  
+
   // Get top 3 and bottom 3
   const top3 = yesterdayPerformance.slice(0, 3)
   const bottom3 = yesterdayPerformance.slice(-3).reverse()
-  
+
   // Get critical issues from yesterday
   const { data: criticalAlerts } = await supabase
     .from('alerts_sent')
@@ -74,7 +104,7 @@ export async function buildDailyMorningBrief(date: string = new Date().toISOStri
     .in('alert_type', ['zero_sales', 'high_dq'])
     .order('sent_at', { ascending: false })
     .limit(5)
-  
+
   return {
     date,
     yesterdayDate: yesterdayStr,
@@ -96,13 +126,13 @@ export async function buildDailyMorningBrief(date: string = new Date().toISOStri
  */
 export async function buildMidDayCheckIn(date: string = new Date().toISOString().split('T')[0]) {
   const supabase = getSupabaseClient()
-  
+
   // Get all active centers
   const { data: centers } = await supabase
     .from('centers')
     .select('*')
     .eq('status', true)
-  
+
   // Get current performance
   const currentPerformance = await Promise.all(
     (centers || []).map(async (center) => {
@@ -110,12 +140,12 @@ export async function buildMidDayCheckIn(date: string = new Date().toISOString()
         getTotalSalesVolume(date, center.id),
         getDQPercentage(date, center.id)
       ])
-      
+
       // At 1 PM, we should be at ~54% of daily target (13/24 hours)
       const expectedProgress = center.daily_sales_target * 0.54
       const actualProgress = (sales / center.daily_sales_target) * 100
       const isAtRisk = sales < expectedProgress * 0.75 // Less than 75% of expected
-      
+
       return {
         center: center.center_name,
         sales,
@@ -127,15 +157,15 @@ export async function buildMidDayCheckIn(date: string = new Date().toISOString()
       }
     })
   )
-  
+
   // Identify at-risk centers
   const atRiskCenters = currentPerformance.filter(p => p.isAtRisk)
-  
+
   // Get top performer
-  const topPerformer = currentPerformance.reduce((max, p) => 
+  const topPerformer = currentPerformance.reduce((max, p) =>
     p.actualProgress > max.actualProgress ? p : max, currentPerformance[0]
   )
-  
+
   return {
     date,
     time: '1:00 PM',
@@ -158,13 +188,13 @@ export async function buildMidDayCheckIn(date: string = new Date().toISOString()
 export async function buildEndOfDaySummary(date: string = new Date().toISOString().split('T')[0]) {
   const metrics = await getComprehensiveMetrics(date)
   const supabase = getSupabaseClient()
-  
+
   // Get all active centers with performance
   const { data: centers } = await supabase
     .from('centers')
     .select('*')
     .eq('status', true)
-  
+
   const centerPerformance = await Promise.all(
     (centers || []).map(async (center) => {
       const [sales, dqData, approvalRate] = await Promise.all([
@@ -172,7 +202,7 @@ export async function buildEndOfDaySummary(date: string = new Date().toISOString
         getDQPercentage(date, center.id),
         getApprovalRate(date, center.id)
       ])
-      
+
       return {
         center: center.center_name,
         sales,
@@ -180,29 +210,29 @@ export async function buildEndOfDaySummary(date: string = new Date().toISOString
         achievement: Math.round((sales / center.daily_sales_target) * 100),
         dqPercentage: dqData.percentage,
         approvalRate: approvalRate.rate,
-        status: sales >= center.daily_sales_target ? 'Target Met ✅' : 
-                sales >= center.daily_sales_target * 0.8 ? 'Near Target ⚠️' : 'Below Target ❌'
+        status: sales >= center.daily_sales_target ? 'Target Met ✅' :
+          sales >= center.daily_sales_target * 0.8 ? 'Near Target ⚠️' : 'Below Target ❌'
       }
     })
   )
-  
+
   // Get quality summary
   const { data: dqItems } = await supabase
     .from('dq_items')
     .select('dq_category')
     .gte('created_at', new Date(date).toISOString())
-  
+
   const dqByCategory = (dqItems || []).reduce((acc: Record<string, number>, item) => {
     const category = item.dq_category || 'Unknown'
     acc[category] = (acc[category] || 0) + 1
     return acc
   }, {} as Record<string, number>)
-  
+
   const topDQIssues = Object.entries(dqByCategory)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 5)
     .map(([category, count]) => ({ category, count }))
-  
+
   return {
     date,
     overallMetrics: metrics,
@@ -225,45 +255,45 @@ export async function buildEndOfDaySummary(date: string = new Date().toISOString
  */
 export async function buildWeeklyReport(weekEndDate: string = new Date().toISOString().split('T')[0]) {
   const supabase = getSupabaseClient()
-  
+
   // Calculate week start (7 days before end)
   const weekStart = new Date(weekEndDate)
   weekStart.setDate(weekStart.getDate() - 6)
   const weekStartStr = weekStart.toISOString().split('T')[0]
-  
+
   // Get all active centers
   const { data: centers } = await supabase
     .from('centers')
     .select('*')
     .eq('status', true)
-  
+
   // Get weekly performance for each center
   const weeklyPerformance = await Promise.all(
     (centers || []).map(async (center) => {
       const dailyPerf = await getCenterDailyPerformance(center.id, 7)
-      
+
       const weekTotal = {
         sales: dailyPerf.reduce((sum, d) => sum + d.sales, 0),
         transfers: dailyPerf.reduce((sum, d) => sum + d.transfers, 0),
         dqItems: dailyPerf.reduce((sum, d) => sum + d.dqCount, 0),
         target: center.daily_sales_target * 7
       }
-      
+
       return {
         center: center.center_name,
         ...weekTotal,
         achievement: Math.round((weekTotal.sales / weekTotal.target) * 100),
-        avgDailyDQ: dailyPerf.length > 0 ? 
+        avgDailyDQ: dailyPerf.length > 0 ?
           Math.round(dailyPerf.reduce((sum, d) => sum + d.dqPercentage, 0) / dailyPerf.length * 10) / 10 : 0,
         trend: dailyPerf.length >= 2 ?
           dailyPerf[dailyPerf.length - 1].sales > dailyPerf[0].sales ? '📈 Up' : '📉 Down' : '➡️ Stable'
       }
     })
   )
-  
+
   // Sort by achievement
   weeklyPerformance.sort((a, b) => b.achievement - a.achievement)
-  
+
   return {
     weekStart: weekStartStr,
     weekEnd: weekEndDate,
@@ -284,32 +314,32 @@ export async function buildWeeklyReport(weekEndDate: string = new Date().toISOSt
  */
 export async function buildMonthlyReport(monthEndDate: string = new Date().toISOString().split('T')[0]) {
   const supabase = getSupabaseClient()
-  
+
   // Calculate month start
   const monthEnd = new Date(monthEndDate)
   const monthStart = new Date(monthEnd.getFullYear(), monthEnd.getMonth(), 1)
   const monthStartStr = monthStart.toISOString().split('T')[0]
   const daysInMonth = Math.floor((monthEnd.getTime() - monthStart.getTime()) / (1000 * 60 * 60 * 24)) + 1
-  
+
   // Get all active centers
   const { data: centers } = await supabase
     .from('centers')
     .select('*')
     .eq('status', true)
-  
+
   // Get monthly performance
   const monthlyPerformance = await Promise.all(
     (centers || []).map(async (center) => {
       const dailyPerf = await getCenterDailyPerformance(center.id, daysInMonth)
-      
+
       const monthTotal = {
         sales: dailyPerf.reduce((sum, d) => sum + d.sales, 0),
         transfers: dailyPerf.reduce((sum, d) => sum + d.transfers, 0),
-        approvals: dailyPerf.reduce((sum, d) => sum + d.approvalCount, 0),
+        approvals: dailyPerf.reduce((sum, d) => sum + d.approvals, 0),
         dqItems: dailyPerf.reduce((sum, d) => sum + d.dqCount, 0),
         target: center.daily_sales_target * daysInMonth
       }
-      
+
       return {
         center: center.center_name,
         ...monthTotal,
@@ -321,10 +351,10 @@ export async function buildMonthlyReport(monthEndDate: string = new Date().toISO
       }
     })
   )
-  
+
   // Rankings
   monthlyPerformance.sort((a, b) => b.achievement - a.achievement)
-  
+
   return {
     monthStart: monthStartStr,
     monthEnd: monthEndDate,
@@ -350,16 +380,16 @@ export async function buildMonthlyReport(monthEndDate: string = new Date().toISO
 export async function sendMorningBrief() {
   const report = await buildDailyMorningBrief()
   const html = generateMorningBriefHTML(report)
-  
+
   // Get all managers and admins
   const supabase = getSupabaseClient()
   const { data: users } = await supabase
     .from('users')
     .select('email')
     .overlaps('role', ['admin', 'manager'])
-  
+
   const recipients = users?.map(u => u.email) || []
-  
+
   if (recipients.length > 0) {
     await sendEmail(
       recipients,
@@ -372,7 +402,7 @@ export async function sendMorningBrief() {
 /**
  * Generate Morning Brief HTML
  */
-function generateMorningBriefHTML(report: any): string {
+function generateMorningBriefHTML(report: MorningBriefReport): string {
   return `
 <!DOCTYPE html>
 <html>
@@ -420,7 +450,7 @@ function generateMorningBriefHTML(report: any): string {
         <tr><th>Center</th><th>Sales</th><th>Target</th><th>Achievement</th></tr>
       </thead>
       <tbody>
-        ${report.top3.map((p: any) => `
+        ${report.top3.map((p) => `
           <tr class="top">
             <td>${p.center}</td>
             <td>${p.sales}</td>
@@ -439,7 +469,7 @@ function generateMorningBriefHTML(report: any): string {
         <tr><th>Center</th><th>Sales</th><th>Target</th><th>Achievement</th></tr>
       </thead>
       <tbody>
-        ${report.bottom3.map((p: any) => `
+        ${report.bottom3.map((p) => `
           <tr class="bottom">
             <td>${p.center}</td>
             <td>${p.sales}</td>

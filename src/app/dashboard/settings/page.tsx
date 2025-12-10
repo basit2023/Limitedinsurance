@@ -102,11 +102,24 @@ function SettingsContent() {
     toast.loading(`Testing ${type} integration...`, { id: 'test-integration' })
 
     try {
-      // Simulate test
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      toast.success(`${type} integration test successful!`, { id: 'test-integration' })
+      const response = await fetch('/api/alerts/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channels: [type.toLowerCase().replace(' notification', '').replace('integration', '').trim()],
+          message: `Test ${type} from Settings Page`
+        })
+      })
+
+      if (!response.ok) throw new Error('Test failed')
+
+      const result = await response.json()
+      console.log('Test Result:', result)
+
+      toast.success(`${type} test sent! Check your logs/inbox.`, { id: 'test-integration' })
     } catch (err) {
-      toast.error(`${type} integration test failed`, { id: 'test-integration' })
+      console.error(err)
+      toast.error(`${type} test failed to trigger`, { id: 'test-integration' })
     }
   }
 
