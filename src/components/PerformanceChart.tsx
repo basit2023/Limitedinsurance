@@ -68,7 +68,7 @@ export default function PerformanceChart({
             return (
                 <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
                     <p className="font-semibold text-gray-900 mb-2">{label}</p>
-                    {payload.map((entry, index) => (
+                    {payload.map((entry: any, index: number) => (
                         <p key={index} className="text-sm" style={{ color: entry.color }}>
                             {entry.name}: <span className="font-bold">{entry.value}</span>
                         </p>
