@@ -5,6 +5,7 @@ import {
   getApprovalRatioTransferVsSubmission,
   getTransferCount
 } from './metricsService'
+import { sendMultiChannelNotification } from './notificationDispatcher'
 
 function getSupabaseClient() {
   const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -354,11 +355,18 @@ async function triggerAlert(
       console.error('Error fetching users for alert:', userError)
     }
 
-    // Filter in memory to be safe against complex join syntax issues
+    // Filter for Admin Owner to ensure only they get notifications as per request
+    // This overrides the rule's recipient_roles for now, or ensures we only match Admin Owner
+    const matchRole = 'Admin Owner'.toLowerCase()
     const validUsers = users?.filter((u: any) =>
       u.user_types &&
-      rule.recipient_roles.includes(u.user_types.name.toLowerCase())
+      u.user_types.name.toLowerCase() === matchRole
     ) || []
+
+    if (validUsers.length === 0) {
+      console.log('No Admin Owner users found to receive alert')
+      return
+    }
 
     const recipients = validUsers.map((u: any) => u.email)
 
@@ -380,9 +388,21 @@ async function triggerAlert(
       return
     }
 
-    // Send notifications (this will be handled by the notification dispatcher)
+    // Send notifications via dispatcher
     console.log(`🔔 ALERT LOGGED: ${message}`)
     console.log(`   Recipients: ${recipients.join(', ')}`)
+
+    await sendMultiChannelNotification(
+      rule.channels,
+      message,
+      {
+        centerName: center.center_name,
+        priority: rule.priority,
+        userId: validUsers[0]?.id, // For push notifications
+        recipients,
+        dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard`
+      }
+    )
 
   } catch (error) {
     console.error('Error triggering alert:', error)
