@@ -10,8 +10,8 @@ DECLARE
   payload JSONB;
 BEGIN
   -- Get the application URL from environment or use default
-  -- You'll need to update this with your actual Vercel URL
-  app_url := 'https://your-app.vercel.app';
+  -- Updated with actual Vercel deployment URL
+  app_url := 'https://limitedinsurance-f1v9.vercel.app';
   
   -- Build the webhook URL
   webhook_url := app_url || '/api/sales/notify';
