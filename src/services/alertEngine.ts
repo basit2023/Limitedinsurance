@@ -353,30 +353,38 @@ async function triggerAlert(
       return
     }
 
-    // Get recipients based on roles
-    // Join user_types to filter by role name
+    // Get recipients based on permission level
+    // Only users with permission_level > 15 receive notifications
     const { data: users, error: userError } = await supabase
       .from('users')
-      .select('id, email, full_name, user_types!inner(name)')
+      .select(`
+        id, 
+        email, 
+        full_name,
+        user_types!inner(
+          name,
+          permission_level
+        )
+      `)
+      .eq('status', true)
 
     if (userError) {
       console.error('Error fetching users for alert:', userError)
     }
 
-    // Filter for Admin Owner to ensure only they get notifications as per request
-    // This overrides the rule's recipient_roles for now, or ensures we only match Admin Owner
-    const matchRole = 'Admin Owner'.toLowerCase()
+    // Filter users with permission_level > 15
     const validUsers = users?.filter((u: any) =>
       u.user_types &&
-      u.user_types.name.toLowerCase() === matchRole
+      u.user_types.permission_level > 15
     ) || []
 
     if (validUsers.length === 0) {
-      console.log('No Admin Owner users found to receive alert')
+      console.log('No users with permission_level > 15 found to receive alert')
       return
     }
 
     const recipients = validUsers.map((u: any) => u.email)
+    console.log(`📧 Sending to ${recipients.length} users with permission_level > 15`)
 
     // Log the alert
     const { error: insertError } = await supabase
@@ -396,9 +404,6 @@ async function triggerAlert(
       return
     }
 
-    // Send notifications via dispatcher
-    console.log(`🔔 ALERT LOGGED: ${message}`)
-    console.log(`   Recipients: ${recipients.join(', ')}`)
 
     await sendMultiChannelNotification(
       rule.channels,
