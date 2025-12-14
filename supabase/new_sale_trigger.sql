@@ -24,7 +24,7 @@ BEGIN
       'date', NEW.date,
       'agent', NEW.agent,
       'insured_name', NEW.insured_name,
-      'client_name', NEW.client_name,
+      -- client_name removed as it does not exist in the table (insured_name is used instead)
       'client_phone_number', NEW.client_phone_number,
       'status', NEW.status,
       'call_result', NEW.call_result,
