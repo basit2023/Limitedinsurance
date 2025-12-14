@@ -123,9 +123,9 @@ function DataEntryForm() {
             <div className="flex-1">
               <h3 className="font-semibold text-yellow-900">No Centers Available</h3>
               <p className="text-sm text-yellow-700 mt-1">
-                You need to add centers before entering data. Run this SQL in your Supabase SQL Editor:
+                You need to add centers before entering data.
               </p>
-              <div className="mt-3 bg-yellow-100 rounded p-3 text-xs font-mono text-yellow-900 overflow-x-auto">
+              {/* <div className="mt-3 bg-yellow-100 rounded p-3 text-xs font-mono text-yellow-900 overflow-x-auto">
                 <pre className="whitespace-pre-wrap">{`INSERT INTO centers (center_name, location, region, daily_sales_target) VALUES
   ('Dallas BPO Center', 'Dallas, TX', 'South', 50),
   ('Phoenix BPO Center', 'Phoenix, AZ', 'West', 45),
@@ -133,7 +133,7 @@ function DataEntryForm() {
               </div>
               <p className="text-xs text-yellow-600 mt-2">
                 After adding centers, refresh this page.
-              </p>
+              </p> */}
             </div>
           </div>
         </div>
@@ -366,7 +366,7 @@ function DataEntryForm() {
       </div>
 
       {/* Help Text */}
-      <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+      {/* <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
           <div className="text-sm text-blue-900">
@@ -379,7 +379,7 @@ function DataEntryForm() {
             </ul>
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   )
 }

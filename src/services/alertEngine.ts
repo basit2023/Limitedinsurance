@@ -30,6 +30,7 @@ interface AlertRule {
   channels: string[]
   priority: 'critical' | 'high' | 'medium' | 'low'
   enabled: boolean
+  enable_notifications: boolean
   quiet_hours_start: string | null
   quiet_hours_end: string | null
 }
@@ -40,6 +41,7 @@ interface Center {
   daily_sales_target: number
   location: string
   region: string
+  slack_webhook_url?: string | null
 }
 
 /**
@@ -327,6 +329,12 @@ async function triggerAlert(
 
   console.log(`Triggering alert for ${center.center_name}: ${rule.rule_name}`)
 
+  // Check if notifications are enabled for this rule
+  if (!rule.enable_notifications) {
+    console.log(`Notifications disabled for rule: ${rule.rule_name}. Alert logged but not sent.`)
+    return
+  }
+
   try {
     // Check if we've sent this alert recently (frequency cap)
     // Reduce cap to 5 minutes so testing is easier
@@ -400,7 +408,10 @@ async function triggerAlert(
         priority: rule.priority,
         userId: validUsers[0]?.id, // For push notifications
         recipients,
-        dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard`
+        dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard`,
+        slackWebhookUrl: center.slack_webhook_url || undefined, // Pass center-specific Slack webhook
+        centerId: center.id,
+        triggerType: rule.trigger_type // Pass trigger type for intelligent channel routing
       }
     )
 

@@ -9,6 +9,9 @@ interface NotificationMetadata {
   dashboardUrl?: string
   recipients?: string[]
   userId?: string
+  slackWebhookUrl?: string
+  centerId?: string
+  triggerType?: 'low_sales' | 'zero_sales' | 'high_dq' | 'low_approval' | 'milestone' | 'below_threshold_duration'
 }
 
 // Helper to get Supabase client for preference checks
@@ -28,6 +31,7 @@ function getSupabaseClient() {
 
 /**
  * Send a Slack notification
+ * Supports both global channel webhooks and per-center webhooks
  */
 export async function sendSlackMessage(
   channel: 'sales' | 'quality' | 'critical',
@@ -37,16 +41,21 @@ export async function sendSlackMessage(
     priority?: string
     actionItems?: string[]
     dashboardUrl?: string
+    slackWebhookUrl?: string
   }
 ) {
   try {
-    const webhookUrls = {
-      sales: process.env.SLACK_WEBHOOK_SALES_ALERTS,
-      quality: process.env.SLACK_WEBHOOK_QUALITY_ALERTS,
-      critical: process.env.SLACK_WEBHOOK_CRITICAL_ALERTS
-    }
+    // Use center-specific webhook if provided, otherwise fall back to global webhooks
+    let webhookUrl = metadata?.slackWebhookUrl
 
-    const webhookUrl = webhookUrls[channel]
+    if (!webhookUrl) {
+      const webhookUrls = {
+        sales: process.env.SLACK_WEBHOOK_SALES_ALERTS,
+        quality: process.env.SLACK_WEBHOOK_QUALITY_ALERTS,
+        critical: process.env.SLACK_WEBHOOK_CRITICAL_ALERTS
+      }
+      webhookUrl = webhookUrls[channel]
+    }
 
     if (!webhookUrl) {
       console.log(`[MOCK SLACK] (${channel}) ${message}`) // Log to console as fallback
@@ -227,6 +236,50 @@ export async function sendPushNotification(
 }
 
 /**
+ * Send a Web Push notification (PWA)
+ */
+export async function sendWebPushNotification(
+  userId: string,
+  payload: {
+    title: string
+    body: string
+    data?: Record<string, unknown>
+    priority?: 'high' | 'normal'
+  }
+) {
+  try {
+    // Call the push API endpoint
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/push/send`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        userId,
+        title: payload.title,
+        body: payload.body,
+        data: payload.data,
+        priority: payload.priority || 'normal'
+      })
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      console.error('Error sending web push:', error)
+      return { success: false, error: error.error || 'Unknown error' }
+    }
+
+    const result = await response.json()
+    console.log(`📱 Web push notification sent to user ${userId}:`, result)
+    return { success: true, ...result }
+
+  } catch (error) {
+    console.error('Error sending web push notification:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+}
+
+/**
  * Send a WhatsApp message (using Twilio)
  */
 export async function sendWhatsAppMessage(phoneNumber: string, message: string) {
@@ -311,6 +364,9 @@ export async function sendMultiChannelNotification(
     priority?: string
     actionItems?: string[]
     dashboardUrl?: string
+    slackWebhookUrl?: string
+    centerId?: string
+    triggerType?: 'low_sales' | 'zero_sales' | 'high_dq' | 'low_approval' | 'milestone' | 'below_threshold_duration'
   }
 ) {
   const results: Array<{ channel: string; success: boolean; mocked?: boolean; error?: string; messageId?: string; queued?: boolean }> = []
@@ -318,7 +374,31 @@ export async function sendMultiChannelNotification(
   for (const channel of channels) {
     switch (channel) {
       case 'slack':
-        const slackChannel = metadata.priority === 'critical' ? 'critical' : 'sales'
+        // Intelligent channel routing based on trigger type
+        let slackChannel: 'sales' | 'quality' | 'critical' = 'sales'
+
+        if (metadata.triggerType) {
+          switch (metadata.triggerType) {
+            case 'zero_sales':
+              slackChannel = 'critical'
+              break
+            case 'low_sales':
+            case 'milestone':
+            case 'below_threshold_duration':
+              slackChannel = 'sales'
+              break
+            case 'high_dq':
+            case 'low_approval':
+              slackChannel = 'quality'
+              break
+            default:
+              slackChannel = 'sales'
+          }
+        } else if (metadata.priority === 'critical') {
+          // Fallback to priority-based routing if no trigger type
+          slackChannel = 'critical'
+        }
+
         const slackResult = await sendSlackMessage(slackChannel, message, metadata)
         results.push({ channel: 'slack', ...slackResult })
         break
@@ -337,6 +417,7 @@ export async function sendMultiChannelNotification(
 
       case 'push':
         if (metadata.userId) {
+          // Send both mobile push (Firebase) and web push (PWA)
           const pushResult = await sendPushNotification(metadata.userId, {
             title: metadata.centerName || 'Performance Alert',
             body: message,
@@ -344,6 +425,15 @@ export async function sendMultiChannelNotification(
             data: metadata
           })
           results.push({ channel: 'push', ...pushResult })
+
+          // Also send web push notification
+          const webPushResult = await sendWebPushNotification(metadata.userId, {
+            title: metadata.centerName || 'Performance Alert',
+            body: message,
+            priority: metadata.priority === 'critical' ? 'high' : 'normal',
+            data: metadata
+          })
+          results.push({ channel: 'web-push', ...webPushResult })
         }
         break
 
