@@ -371,7 +371,7 @@ async function triggerAlert(
     if (userError) {
       console.error('Error fetching users for alert:', userError)
     }
-
+    // get code code
     // Filter users with permission_level > 15
     const validUsers = users?.filter((u: any) =>
       u.user_types &&
