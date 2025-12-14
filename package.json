@@ -9,7 +9,9 @@
     "lint": "eslint",
     "test:notifications": "tsx scripts/test_notifications.ts",
     "generate:vapid": "npx web-push generate-vapid-keys",
-    "create:slack-channels": "tsx scripts/create_slack_channels.ts"
+    "create:slack-channels": "tsx scripts/create_slack_channels.ts",
+    "add:sales": "tsx scripts/add_sales_data.ts",
+    "bulk:sales": "tsx scripts/bulk_add_sales.ts"
   },
   "dependencies": {
     "@slack/web-api": "^7.13.0",
@@ -47,6 +49,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.0.7",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

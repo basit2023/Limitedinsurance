@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
+import PushNotificationSetup from '@/components/PushNotificationSetup'
 import {
   Settings as SettingsIcon, Bell, Shield, Sliders, Mail,
   Smartphone, Save, RefreshCw, AlertCircle, Check
@@ -294,6 +295,15 @@ function SettingsContent() {
       {/* Notifications Tab */}
       {activeTab === 'notifications' && (
         <div className="space-y-6">
+          {/* Push Notification Setup Component */}
+          <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Push Notification Setup</h2>
+            <p className="text-sm text-gray-600 mb-6">
+              Enable browser push notifications to receive real-time alerts even when the app is closed.
+            </p>
+            <PushNotificationSetup />
+          </div>
+
           <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">Notification Preferences</h2>
 

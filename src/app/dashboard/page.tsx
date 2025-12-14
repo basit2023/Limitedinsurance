@@ -7,6 +7,7 @@ import DashboardLayout from '@/components/DashboardLayout'
 import MetricCard from '@/components/MetricCard'
 import StatusIndicator, { getStatusFromTarget } from '@/components/StatusIndicator'
 import PerformanceChart from '@/components/PerformanceChart'
+import PushNotificationSetup from '@/components/PushNotificationSetup'
 import {
   TrendingUp, TrendingDown, AlertCircle, CheckCircle, Clock,
   Users, RefreshCw, Download, Filter, BarChart3, Activity
