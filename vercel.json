@@ -1,4 +1,6 @@
 {
+    "buildCommand": "next build",
+    "framework": "nextjs",
     "crons": [
         {
             "path": "/api/cron/evaluate-alerts",
@@ -8,5 +10,8 @@
             "path": "/api/cron/hourly-check",
             "schedule": "0 * * * *"
         }
-    ]
+    ],
+    "env": {
+        "NODE_ENV": "production"
+    }
 }

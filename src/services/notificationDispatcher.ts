@@ -1,6 +1,7 @@
 import { IncomingWebhook } from '@slack/webhook'
 import nodemailer from 'nodemailer'
 import { createClient } from '@supabase/supabase-js'
+import { createCenterSlackChannel, sendSlackChannelMessage } from './slackChannelService'
 
 interface NotificationMetadata {
   centerName?: string
@@ -32,6 +33,7 @@ function getSupabaseClient() {
 /**
  * Send a Slack notification
  * Supports both global channel webhooks and per-center webhooks
+ * Automatically creates center-specific channels if they don't exist
  */
 export async function sendSlackMessage(
   channel: 'sales' | 'quality' | 'critical',
@@ -42,11 +44,28 @@ export async function sendSlackMessage(
     actionItems?: string[]
     dashboardUrl?: string
     slackWebhookUrl?: string
+    centerId?: string
   }
 ) {
   try {
     // Use center-specific webhook if provided, otherwise fall back to global webhooks
     let webhookUrl = metadata?.slackWebhookUrl
+
+    // Try to create/use center-specific channel if centerName is provided
+    if (!webhookUrl && metadata?.centerName && metadata?.centerId) {
+      const channelResult = await createCenterSlackChannel(
+        metadata.centerName,
+        metadata.centerId
+      )
+
+      if (channelResult.channelId && !channelResult.error) {
+        // Use the channel ID to send message
+        console.log(`Using dedicated Slack channel for ${metadata.centerName}`)
+        return await sendSlackChannelMessage(channelResult.channelId, message, metadata)
+      } else if (channelResult.error) {
+        console.warn(`Could not create Slack channel for ${metadata.centerName}: ${channelResult.error}`)
+      }
+    }
 
     if (!webhookUrl) {
       const webhookUrls = {
@@ -353,6 +372,7 @@ export async function checkFrequencyCap(_userId: string, _alertType: string): Pr
 
 /**
  * Send multi-channel notification
+ * Enhanced to send to all recipients via email, Slack (with channel creation), and PWA push
  */
 export async function sendMultiChannelNotification(
   channels: string[],
@@ -399,7 +419,10 @@ export async function sendMultiChannelNotification(
           slackChannel = 'critical'
         }
 
-        const slackResult = await sendSlackMessage(slackChannel, message, metadata)
+        const slackResult = await sendSlackMessage(slackChannel, message, {
+          ...metadata,
+          centerId: metadata.centerId // Pass centerId for channel creation
+        })
         results.push({ channel: 'slack', ...slackResult })
         break
 
@@ -416,8 +439,45 @@ export async function sendMultiChannelNotification(
         break
 
       case 'push':
-        if (metadata.userId) {
-          // Send both mobile push (Firebase) and web push (PWA)
+        if (metadata.recipients && metadata.recipients.length > 0) {
+          // Send web push notification to ALL recipients
+          const supabase = getSupabaseClient()
+          
+          if (supabase) {
+            try {
+              // Get user IDs for all recipients
+              const { data: users } = await supabase
+                .from('users')
+                .select('id')
+                .in('email', metadata.recipients)
+
+              if (users && users.length > 0) {
+                for (const user of users) {
+                  // Send both mobile push (Firebase) and web push (PWA)
+                  const pushResult = await sendPushNotification(user.id, {
+                    title: metadata.centerName || 'Performance Alert',
+                    body: message,
+                    priority: metadata.priority === 'critical' ? 'high' : 'normal',
+                    data: metadata
+                  })
+                  results.push({ channel: `push-${user.id}`, ...pushResult })
+
+                  // Also send web push notification
+                  const webPushResult = await sendWebPushNotification(user.id, {
+                    title: metadata.centerName || 'Performance Alert',
+                    body: message,
+                    priority: metadata.priority === 'critical' ? 'high' : 'normal',
+                    data: metadata
+                  })
+                  results.push({ channel: `web-push-${user.id}`, ...webPushResult })
+                }
+              }
+            } catch (error) {
+              console.error('Error sending push notifications to recipients:', error)
+            }
+          }
+        } else if (metadata.userId) {
+          // Fallback to single user if no recipients
           const pushResult = await sendPushNotification(metadata.userId, {
             title: metadata.centerName || 'Performance Alert',
             body: message,
@@ -426,7 +486,6 @@ export async function sendMultiChannelNotification(
           })
           results.push({ channel: 'push', ...pushResult })
 
-          // Also send web push notification
           const webPushResult = await sendWebPushNotification(metadata.userId, {
             title: metadata.centerName || 'Performance Alert',
             body: message,
@@ -448,6 +507,13 @@ export async function sendMultiChannelNotification(
         break
     }
   }
+
+  console.log(`📬 Multi-channel notification sent:`, {
+    channels: channels.join(', '),
+    center: metadata.centerName,
+    recipients: metadata.recipients?.length || 0,
+    resultsCount: results.length
+  })
 
   return results
 }

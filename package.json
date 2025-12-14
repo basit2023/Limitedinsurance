@@ -6,9 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:notifications": "tsx scripts/test_notifications.ts",
+    "generate:vapid": "npx web-push generate-vapid-keys",
+    "create:slack-channels": "tsx scripts/create_slack_channels.ts"
   },
   "dependencies": {
+    "@slack/web-api": "^7.13.0",
     "@slack/webhook": "^7.0.6",
     "@supabase/supabase-js": "^2.86.2",
     "bcryptjs": "^2.4.3",
