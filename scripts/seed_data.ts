@@ -161,8 +161,7 @@ async function seedData() {
         console.log('✅ Seed Data Completed Successfully!');
         console.log(`-------------------------------------`);
         console.log(`Admin User: ${adminEmail} (PW: hashed_placeholder_pass)`);
-        console.log(`Center: ${center.center_name}`);
-        console.log(`Alert Rule: ${rule.rule_name}`);
+
         console.log(`-------------------------------------`);
 
     } catch (err) {
