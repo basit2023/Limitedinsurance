@@ -153,15 +153,33 @@ export async function getCurrentSubscription(): Promise<PushSubscription | null>
  * Save subscription to backend
  */
 async function saveSubscriptionToBackend(subscription: PushSubscriptionData): Promise<void> {
+    // Get user ID from localStorage
+    const userStr = localStorage.getItem('user')
+    let userId = null
+    
+    if (userStr) {
+        try {
+            const user = JSON.parse(userStr)
+            userId = user.id
+        } catch (e) {
+            console.error('Error parsing user from localStorage:', e)
+        }
+    }
+
     const response = await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify(subscription)
+        body: JSON.stringify({
+            ...subscription,
+            userId
+        })
     })
 
     if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('Backend error:', error)
         throw new Error('Failed to save subscription to backend')
     }
 }
